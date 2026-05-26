@@ -1,0 +1,291 @@
+```html
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Universe Sandbox Android</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts for sci-fi look -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Rajdhani', sans-serif;
+            background-color: #020205;
+            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        .orbitron {
+            font-family: 'Orbitron', sans-serif;
+        }
+        /* Custom scrollbar for control drawers */
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 2px;
+        }
+        /* Hide native focus borders */
+        input:focus, select:focus, button:focus {
+            outline: none;
+        }
+        /* Visual active ring */
+        .active-btn {
+            box-shadow: 0 0 12px rgba(59, 130, 246, 0.8);
+            border-color: rgba(59, 130, 246, 1);
+            background-color: rgba(30, 41, 59, 0.9) !important;
+        }
+        /* Ripple-like tap highlight for Android styling */
+        .android-ripple:active {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col text-slate-100 select-none">
+
+    <!-- Loading Screen / App Splash -->
+    <div id="loading-screen" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#020209] transition-opacity duration-1000">
+        <div class="relative flex items-center justify-center mb-6">
+            <div class="animate-spin rounded-full h-32 w-32 border-b-2 border-t-2 border-blue-500"></div>
+            <div class="absolute animate-pulse text-blue-400 font-bold orbitron text-xs">READYING ENGINE</div>
+        </div>
+        <h1 class="text-3xl font-extrabold text-white tracking-widest orbitron mb-2">UNIVERSE SANDBOX</h1>
+        <p class="text-blue-400 font-medium text-sm tracking-widest">ANDROID OS PORT</p>
+        <p class="text-xs text-slate-500 mt-8">Optimized for haptics, multi-touch, and audio synths...</p>
+    </div>
+
+    <!-- Main Canvas Viewport -->
+    <div class="relative w-full flex-grow h-0">
+        <canvas id="space-canvas" class="w-full h-full block touch-none"></canvas>
+
+        <!-- Top Status Bar overlay -->
+        <div class="absolute top-4 left-4 right-4 pointer-events-none flex justify-between items-start z-10">
+            <!-- Sim Readout -->
+            <div class="bg-black/75 backdrop-blur-md border border-slate-800 rounded-xl p-3 text-xs flex flex-col gap-1 pointer-events-auto shadow-2xl">
+                <div class="flex items-center gap-2">
+                    <span class="inline-block w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse"></span>
+                    <span class="orbitron text-slate-300 font-bold uppercase tracking-wider text-[10px]" id="system-preset-name">Solar System</span>
+                </div>
+                <div class="text-slate-400 mt-1">Objects: <span id="object-count" class="text-white font-mono font-bold">0</span></div>
+                <div class="text-slate-400">Time Warp: <span id="time-speed-label" class="text-blue-400 font-mono font-bold">1.0x</span></div>
+            </div>
+
+            <!-- Global Action Controls (System Settings, APK Guide, Audio, Fullscreen) -->
+            <div class="flex gap-1.5 pointer-events-auto">
+                <!-- Audio Synth Toggle -->
+                <button id="btn-toggle-audio" class="android-ripple w-10 h-10 bg-slate-900/80 hover:bg-slate-800 border border-slate-700/60 rounded-xl flex items-center justify-center text-slate-300 transition-all shadow-lg" title="Toggle Sound Synth">
+                    <i id="audio-icon" class="fa-solid fa-volume-high"></i>
+                </button>
+                <!-- Fullscreen native browser toggle -->
+                <button id="btn-toggle-fullscreen" class="android-ripple w-10 h-10 bg-slate-900/80 hover:bg-slate-800 border border-slate-700/60 rounded-xl flex items-center justify-center text-slate-300 transition-all shadow-lg" title="Toggle Android Immersive Mode">
+                    <i class="fa-solid fa-expand"></i>
+                </button>
+                <!-- Grid Toggle -->
+                <button id="btn-toggle-grid" class="android-ripple w-10 h-10 bg-slate-900/80 hover:bg-slate-800 border border-slate-700/60 rounded-xl flex items-center justify-center text-slate-300 transition-all shadow-lg" title="Toggle Gravity Grid">
+                    <i class="fa-solid fa-border-all"></i>
+                </button>
+                <!-- Save Slots Trigger -->
+                <button id="btn-save-drawer-trigger" class="android-ripple w-10 h-10 bg-slate-900/80 hover:bg-slate-800 border border-slate-700/60 rounded-xl flex items-center justify-center text-slate-300 transition-all shadow-lg" title="Android Storage Slots">
+                    <i class="fa-solid fa-floppy-disk"></i>
+                </button>
+                <button id="btn-quick-presets" class="android-ripple px-3 h-10 bg-blue-600/90 hover:bg-blue-500 border border-blue-500/50 rounded-xl flex items-center gap-2 text-white font-bold text-xs orbitron transition-all shadow-lg">
+                    <i class="fa-solid fa-globe"></i> Presets
+                </button>
+            </div>
+        </div>
+
+        <!-- Android Build Helper Button (Floating Left Bottom) -->
+        <div class="absolute bottom-24 left-4 z-10">
+            <button id="btn-android-guide" class="android-ripple bg-green-600/95 border border-green-500/50 text-white orbitron font-bold text-[10px] tracking-widest px-3 py-2 rounded-xl shadow-2xl flex items-center gap-2">
+                <i class="fa-brand fa-android text-sm animate-pulse"></i> APK COMPILE GUIDE
+            </button>
+        </div>
+
+        <!-- Touch/Launch Arrow Guide (Floating tips) -->
+        <div id="mode-tip" class="absolute top-20 left-1/2 -translate-x-1/2 bg-blue-600/90 backdrop-blur-md text-white font-bold text-xs orbitron px-4 py-1.5 rounded-full border border-blue-400/30 shadow-lg pointer-events-none transition-all duration-300 opacity-0 scale-95 uppercase tracking-widest flex items-center gap-2">
+            <i class="fa-solid fa-crosshairs animate-ping text-[10px]"></i> Launch Mode: Pull Back & Fling
+        </div>
+
+        <!-- 3D Vector Reticle for slingshot launches -->
+        <div id="reticle-info" class="absolute hidden bg-slate-900/95 border border-blue-500/50 rounded-lg p-2.5 text-xs font-mono text-blue-300 shadow-xl pointer-events-none z-20">
+            <div>Launch Speed: <span id="reticle-speed">0.00</span> m/s</div>
+            <div>Mass Scalar: <span id="reticle-mass">1.0</span> EM</div>
+        </div>
+
+        <!-- In-game Object Inspector Overlay (Left Center) -->
+        <div id="inspector-panel" class="absolute left-4 top-28 w-72 max-h-[50vh] bg-slate-950/95 border border-slate-800 rounded-2xl p-4 shadow-2xl backdrop-blur-md pointer-events-auto flex flex-col hidden overflow-y-auto transition-all duration-300">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-2 mb-3">
+                <div class="flex items-center gap-2">
+                    <span id="inspect-color-indicator" class="w-3.5 h-3.5 rounded-full bg-white shadow-md"></span>
+                    <input id="inspect-name" class="bg-transparent font-bold text-white orbitron text-sm w-36 border-b border-transparent hover:border-slate-700 focus:border-blue-500 px-1 py-0.5" value="Earth" />
+                </div>
+                <button id="inspect-close" class="text-slate-400 hover:text-white transition-colors">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+            </div>
+
+            <!-- Stats/Sliders -->
+            <div class="flex flex-col gap-3 text-xs">
+                <!-- Lock / Anchor Toggle -->
+                <div class="flex justify-between items-center bg-slate-900/50 p-2 rounded-lg">
+                    <span class="text-slate-400">Anchor (Static lock)</span>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="inspect-lock" class="sr-only peer">
+                        <div class="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-300 after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+
+                <!-- Custom Camera Target Lock -->
+                <button id="inspect-follow-btn" class="android-ripple w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 py-1.5 rounded-lg flex items-center justify-center gap-2 text-white font-bold transition-all">
+                    <i class="fa-solid fa-video text-blue-400"></i> Camera Track On
+                </button>
+
+                <!-- Color picker -->
+                <div class="flex items-center justify-between">
+                    <span class="text-slate-400">Atmospheric Tint</span>
+                    <div class="flex gap-1">
+                        <button class="color-swatch w-4 h-4 rounded-full bg-red-500 border border-transparent" data-color="#f87171"></button>
+                        <button class="color-swatch w-4 h-4 rounded-full bg-orange-500 border border-transparent" data-color="#fb923c"></button>
+                        <button class="color-swatch w-4 h-4 rounded-full bg-yellow-400 border border-transparent" data-color="#facc15"></button>
+                        <button class="color-swatch w-4 h-4 rounded-full bg-green-500 border border-transparent" data-color="#4ade80"></button>
+                        <button class="color-swatch w-4 h-4 rounded-full bg-blue-500 border border-transparent" data-color="#60a5fa"></button>
+                        <button class="color-swatch w-4 h-4 rounded-full bg-purple-500 border border-transparent" data-color="#c084fc"></button>
+                    </div>
+                </div>
+
+                <!-- Mass Slider -->
+                <div>
+                    <div class="flex justify-between mb-1">
+                        <span class="text-slate-400">Mass (Earth Masses)</span>
+                        <span id="inspect-mass-val" class="text-blue-400 font-mono">1.00</span>
+                    </div>
+                    <input type="range" id="inspect-mass-slider" min="-1" max="5" step="0.01" class="w-full h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500" value="0" />
+                </div>
+
+                <!-- Radius Slider -->
+                <div>
+                    <div class="flex justify-between mb-1">
+                        <span class="text-slate-400">Physical Size</span>
+                        <span id="inspect-radius-val" class="text-blue-400 font-mono">1.0x</span>
+                    </div>
+                    <input type="range" id="inspect-radius-slider" min="0.1" max="10" step="0.1" class="w-full h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500" value="1" />
+                </div>
+
+                <!-- Velocity magnitude readouts -->
+                <div class="bg-slate-900/50 p-2.5 rounded-lg font-mono text-[11px]">
+                    <div class="text-slate-500 text-[9px] uppercase tracking-wider mb-1">Kinetic State</div>
+                    <div class="grid grid-cols-2 gap-1">
+                        <div>Vel X: <span id="inspect-vx" class="text-white">0.00</span></div>
+                        <div>Vel Y: <span id="inspect-vy" class="text-white">0.00</span></div>
+                        <div class="col-span-2">Magnitude: <span id="inspect-speed" class="text-green-400 font-bold">0.00</span></div>
+                    </div>
+                </div>
+
+                <button id="inspect-destroy" class="w-full bg-red-950/80 hover:bg-red-900/95 border border-red-800/85 py-1.5 rounded-lg text-red-200 font-bold tracking-widest uppercase text-[10px] transition-all">
+                    <i class="fa-solid fa-fire-burner"></i> OBLITERATE
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Space Presets Modal Selection (Overlay) -->
+    <div id="presets-modal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-40 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-950 border border-slate-800 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl max-h-[85vh] flex flex-col">
+            <div class="p-5 border-b border-slate-800 flex justify-between items-center">
+                <h2 class="text-xl font-extrabold orbitron text-white">CHOOSE COSMIC PRESET</h2>
+                <button id="btn-close-presets" class="text-slate-400 hover:text-white text-lg transition-colors">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="p-5 flex flex-col gap-4 overflow-y-auto">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <button class="preset-card bg-slate-900/60 hover:bg-slate-900 border border-slate-800/80 hover:border-blue-500/50 rounded-2xl p-4 text-left transition-all flex flex-col gap-1.5 group" data-preset="solar">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-sun text-yellow-500 text-lg group-hover:scale-110 transition-transform"></i>
+                            <span class="font-bold text-white orbitron text-sm">Solar System</span>
+                        </div>
+                        <p class="text-slate-400 text-xs">Standard solar system with a central yellow dwarf and 4 orbiting planets.</p>
+                    </button>
+
+                    <button class="preset-card bg-slate-900/60 hover:bg-slate-900 border border-slate-800/80 hover:border-indigo-500/50 rounded-2xl p-4 text-left transition-all flex flex-col gap-1.5 group" data-preset="binary">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-circle-nodes text-indigo-400 text-lg group-hover:scale-110 transition-transform"></i>
+                            <span class="font-bold text-white orbitron text-sm">Binary Stars</span>
+                        </div>
+                        <p class="text-slate-400 text-xs">Two ultra-dense stars orbiting each other with volatile, looping rogue planets.</p>
+                    </button>
+
+                    <button class="preset-card bg-slate-900/60 hover:bg-slate-900 border border-slate-800/80 hover:border-red-500/50 rounded-2xl p-4 text-left transition-all flex flex-col gap-1.5 group" data-preset="blackhole">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-circle-radiation text-red-500 text-lg group-hover:spin transition-all"></i>
+                            <span class="font-bold text-white orbitron text-sm">Singularity Devourer</span>
+                        </div>
+                        <p class="text-slate-400 text-xs">A supermassive black hole attracting and stripping gas, dust, and moons into its event horizon.</p>
+                    </button>
+
+                    <button class="preset-card bg-slate-900/60 hover:bg-slate-900 border border-slate-800/80 hover:border-emerald-500/50 rounded-2xl p-4 text-left transition-all flex flex-col gap-1.5 group" data-preset="galaxy">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-hurricane text-emerald-400 text-lg group-hover:rotate-45 transition-transform"></i>
+                            <span class="font-bold text-white orbitron text-sm">Galaxy Core Clash</span>
+                        </div>
+                        <p class="text-slate-400 text-xs">A stellar stream collide sequence featuring spiral arms intersecting and tearing apart.</p>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Storage Slots Overlay Drawer (Android Safe Saves) -->
+    <div id="save-drawer" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-40 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-950 border border-slate-800 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl p-5">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3 mb-4">
+                <h3 class="orbitron text-white font-bold flex items-center gap-2 text-sm">
+                    <i class="fa-solid fa-cloud-arrow-up text-blue-400"></i> ANDROID STORAGE SLOTS
+                </h3>
+                <button id="btn-close-save-drawer" class="text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <p class="text-slate-400 text-xs mb-4">Save the current active state of your simulation to offline device storage slots.</p>
+            <div class="flex flex-col gap-3">
+                <!-- Slot 1 -->
+                <div class="flex items-center justify-between bg-slate-900/80 border border-slate-800 p-3 rounded-xl">
+                    <div>
+                        <div class="font-bold text-xs orbitron text-slate-200">Slot 1 (Alpha Slot)</div>
+                        <div id="slot-1-meta" class="text-[10px] text-slate-500 font-mono">Empty</div>
+                    </div>
+                    <div class="flex gap-1.5">
+                        <button onclick="saveToDeviceSlot(1)" class="android-ripple bg-blue-600/90 text-white font-bold text-[10px] px-2.5 py-1.5 rounded-lg">Save</button>
+                        <button onclick="loadFromDeviceSlot(1)" class="android-ripple bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] px-2.5 py-1.5 rounded-lg font-bold">Load</button>
+                    </div>
+                </div>
+                <!-- Slot 2 -->
+                <div class="flex items-center justify-between bg-slate-900/80 border border-slate-800 p-3 rounded-xl">
+                    <div>
+                        <div class="font-bold text-xs orbitron text-slate-200">Slot 2 (Beta Slot)</div>
+                        <div id="slot-2-meta" class="text-[10px] text-slate-500 font-mono">Empty</div>
+                    </div>
+                    <div class="flex gap-1.5">
+                        <button onclick="saveToDeviceSlot(2)" class="android-ripple bg-blue-600/90 text-white font-bold text-[10px] px-2.5 py-1.5 rounded-lg">Save</button>
+                        <button onclick="loadFromDeviceSlot(2)" class="android-ripple bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] px-2.5 py-1.5 rounded-lg font-bold">Load</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Android APK Build Guide Overlay Modal -->
+    <div id="apk-guide-modal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-40 hidden flex items
